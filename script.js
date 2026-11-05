@@ -1,9 +1,9 @@
+
 const WINNING_COMBINATIONS = [
     [0, 1, 2], [3, 4, 5], [6, 7, 8],
     [0, 3, 6], [1, 4, 7], [2, 5, 8],
     [0, 4, 8], [2, 4, 6]
 ];
-
 
 function Player(name, marker) {
     this.name = name;
@@ -32,8 +32,11 @@ Object.setPrototypeOf(humanPlayer.prototype, Player.prototype);
 Object.setPrototypeOf(AIPlayer.prototype, Player.prototype);
 
 const boardState = (() => { 
+    let gameOver = false;
+
     let currentPLayer = "humanTurn";
     let movesDone = 0;
+    const cellElements = Array.from(document.querySelectorAll('.cell'));
     let board = Array(9).fill("");
 
     const human = new humanPlayer("Human", "O");
@@ -55,6 +58,44 @@ const boardState = (() => {
         return true;
     };
 
+    const handleCellClick = (cellElement, index) => {
+        if(isNaN(index) || index < 0 || index > 8 || board[index] !== ""){
+            console.log("Nope");
+            return false;
+        }
+
+        human.makeMove(board, index);
+        cellElements[index].textContent = human.marker;
+
+        if (checkWin(board, human)) {
+            console.log("You Win!");
+            gameOver = true;
+            return true;
+        }
+
+        if (checkDraw()) {
+            console.log("Draw!");
+            gameOver = true;
+            return true;
+        }
+
+        AIMove();
+
+        if (checkWin(board, AI)) {
+            console.log("AI Wins!");
+            gameOver = true;
+            return true;
+        }
+
+        if (checkDraw()) {
+            console.log("Draw!");
+            gameOver = true;
+            return true;
+        }
+
+        return true;
+    };
+
     const AIMove = () => {
         const emptySlot = []
         board.forEach((cell, index) => {
@@ -66,7 +107,12 @@ const boardState = (() => {
         if(emptySlot.length === 0) return null;
 
         const randomIndex = Math.floor(Math.random() * emptySlot.length);
-        AI.makeMove(board, randomIndex);
+        const chosenBoardIndex = emptySlot[randomIndex];
+
+        AI.makeMove(board, chosenBoardIndex);
+        if(cellElements[chosenBoardIndex]){
+            cellElements[chosenBoardIndex].textContent = AI.marker;
+        }
     }
 
     const switchTurn = () => {
@@ -102,43 +148,34 @@ const boardState = (() => {
 
     return {
         play: function() {
-            console.log("--- Current Board State ---");
-            drawBoard();
-
-            const moved = humanMove();
-            if(!moved) return;
-
-            drawBoard();
-
-            if(checkWin(board, human)) {
-                console.log("You Win!");
-                return;
-            }
-
-            if(checkDraw()){
-                console.log("Draw!");
-                return;
-            }
-
-            console.log("It's AI!");
-            AIMove();
-            drawBoard();
-
-            if(checkWin(board, AI)) {
-                console.log("AI Win!");
-                return;
-            }
-
-            if(checkDraw()) {
-                console.log("Draw");
-                return;
-            }
+            board.fill("");
+            cellElements.forEach(cell => {
+                cell.textContent = "";
+            });
+            currentPLayer = "humanPlayer";
         },
         reset: function() {
             board.fill("");
-            currentPLayer = "humanPlayer";
             console.log("Board reset");
             drawBoard();
-        }
+        },
+        handleCellClick
     };
 })();
+
+const boardUI = document.querySelector("#board");
+
+boardUI.addEventListener('click', (event) => {
+    const clickedCell = event.target.closest('.cell');
+    if(!clickedCell) return;
+
+    const index = parseInt(clickedCell.getAttribute('data-index'), 10);
+
+    boardState.handleCellClick(clickedCell, index);
+});
+
+const playBtn = document.querySelector("#play");
+
+play.addEventListener('click', (event) => {
+    boardState.play();
+});
